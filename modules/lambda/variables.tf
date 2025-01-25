@@ -13,6 +13,11 @@ variable "s3_bucket_arn" {
 }
 
 variable "s3_key" {
-  description = "Clave del archivo zip con el código de la Lambda en el bucket S3"
+  description = "The S3 key for the Lambda function code"
+  type        = string
+}
+
+variable "role_arn" {
+  description = "The Role arn for the Lambda function code"
   type        = string
 }
