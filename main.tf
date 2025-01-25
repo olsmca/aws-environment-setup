@@ -3,32 +3,44 @@ provider "aws" {
 }
 
 # Módulos
-module "api_gateway" {
-  source            = "./modules/api_gateway"
-  enabled           = var.enable_api_gateway
-  environment_name  = var.environment_name
+/*module "api_gateway" {
+  source           = "./modules/api_gateway"
+  environment_name = var.environment_name
 }
 
 module "cognito" {
-  source            = "./modules/cognito"
-  enabled           = var.enable_cognito
-  environment_name  = var.environment_name
-}
+  source           = "./modules/cognito"
+  environment_name = var.environment_name
+}*/
 
 module "lambda" {
-  source            = "./modules/lambda"
-  enabled           = var.enable_lambda
-  environment_name  = var.environment_name
+  source           = "./modules/lambda"
+  s3_bucket_name   = module.s3.bucket_name
+  s3_bucket_arn    = module.s3.bucket_arn
+  environment_name = var.environment_name
 }
-
+/*
 module "sqs" {
-  source            = "./modules/sqs"
-  enabled           = var.enable_sqs
-  environment_name  = var.environment_name
-}
+  source           = "./modules/sqs"
+  environment_name = var.environment_name
+}*/
 
 module "s3" {
-  source            = "./modules/s3"
-  enabled           = var.enable_s3
-  environment_name  = var.environment_name
+  source           = "./modules/s3"
+  environment_name = var.environment_name
 }
+/*
+module "iam" {
+  source           = "./modules/iam"
+  environment_name = var.environment_name
+  services_enabled = var.services_enabled
+}
+
+resource "aws_cognito_identity_pool_roles_attachment" "identity_pool_roles" {
+  identity_pool_id = aws_cognito_identity_pool.identity_pool.id
+
+  roles = {
+    authenticated   = module.iam.cognito_role_arn
+    unauthenticated = module.iam.cognito_role_arn
+  }
+}*/

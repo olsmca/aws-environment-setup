@@ -2,6 +2,7 @@
 
 # Variables iniciales
 TFVARS_FILE="terraform.tfvars"
+TARGETS_FILE="terraform-targets.txt"
 
 # Función para mostrar el encabezado
 function show_header {
@@ -17,22 +18,51 @@ function generate_tfvars {
     cat <<EOF > $TFVARS_FILE
 environment_name = "${ENV_NAME}"
 aws_region       = "${AWS_REGION}"
-enable_api_gateway = $( [[ "$SELECTED_SERVICES" =~ "API Gateway" ]] && echo "true" || echo "false" )
-enable_cognito     = $( [[ "$SELECTED_SERVICES" =~ "Cognito" ]] && echo "true" || echo "false" )
-enable_lambda      = $( [[ "$SELECTED_SERVICES" =~ "Lambda" ]] && echo "true" || echo "false" )
-enable_sqs         = $( [[ "$SELECTED_SERVICES" =~ "SQS" ]] && echo "true" || echo "false" )
-enable_s3          = $( [[ "$SELECTED_SERVICES" =~ "S3" ]] && echo "true" || echo "false" )
 EOF
     echo "Archivo terraform.tfvars generado correctamente."
+}
+
+# Función para generar objetivos de terraform apply
+function generate_targets {
+    > $TARGETS_FILE  # Limpiar el archivo
+    [[ "$SELECTED_SERVICES" =~ "API Gateway" ]] && echo "module.api_gateway" >> $TARGETS_FILE
+    [[ "$SELECTED_SERVICES" =~ "Cognito" ]] && echo "module.cognito" >> $TARGETS_FILE
+    [[ "$SELECTED_SERVICES" =~ "Lambda" ]] && echo "module.lambda" >> $TARGETS_FILE
+    [[ "$SELECTED_SERVICES" =~ "SQS" ]] && echo "module.sqs" >> $TARGETS_FILE
+    [[ "$SELECTED_SERVICES" =~ "S3" ]] && echo "module.s3" >> $TARGETS_FILE
+
+    if [[ -s $TARGETS_FILE ]]; then
+        echo "Archivo terraform-targets.txt generado correctamente."
+    else
+        echo "Error: No se generaron objetivos para Terraform."
+        exit 1
+    fi
 }
 
 # Función para ejecutar Terraform
 function run_terraform {
     echo "Inicializando Terraform..."
     terraform init > /dev/null
+
+    # Crear una lista de objetivos para Terraform
+    TARGETS=""
+    while IFS= read -r target; do
+        TARGETS+=" -target=$target"
+    done < "$TARGETS_FILE"
+
+    if [[ -z "$TARGETS" ]]; then
+        echo "Error: No se encontraron objetivos válidos para Terraform."
+        exit 1
+    fi
+
     echo "Aplicando configuración..."
-    terraform apply -var-file=$TFVARS_FILE -auto-approve
-    echo "¡Provisionamiento completado exitosamente!"
+    terraform plan -var-file=$TFVARS_FILE $TARGETS
+    if [[ $? -eq 0 ]]; then
+        echo "¡Provisionamiento completado exitosamente!"
+    else
+        echo "Error: Falló la ejecución de Terraform."
+        exit 1
+    fi
 }
 
 # Iniciar el menú
@@ -91,6 +121,7 @@ while true; do
                 echo "Error: Configuración incompleta. Por favor, configure el entorno y los servicios primero."
             else
                 generate_tfvars
+                generate_targets
                 run_terraform
             fi
             ;;
